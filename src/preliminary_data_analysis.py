@@ -60,5 +60,54 @@ df["Number Traveled"] = df["District Name"].apply(get_num_traveled)
 df["Population Weightage"] = df["Population Size"] = df["Population Size"] / df["Population Size"].max()
 df["Travel Relative To Employment and Population"] = df["Number Traveled"] / df["Total Employed"] * 100 * df["Population Weightage"]
 
-fig, ax = pyplot.subplots(figsize=(15, 5))
-sns.barplot(y=df["Travel Relative To Employment and Population"], x=df["District Name"])
+pal = sns.color_palette("viridis", 10)
+fig, ax = pyplot.subplots(figsize=(20, 5))
+sns.barplot(y=df["Travel Relative To Employment and Population"], x=df["District Name"], palette=pal)
+
+transport_bus_routes = data["/content/drive/MyDrive/UberData/bus_stops.csv"].groupby("District.Name")["District.Name"].count()
+fig, ax = pyplot.subplots(figsize=(20, 5))
+sns.barplot(y=transport_bus_routes.values, x=df["District Name"], palette=pal)
+
+from shapely.geometry import Point
+import geopandas as gpd
+from geopandas import GeoDataFrame
+import folium
+
+bus_stop_locations = data["/content/drive/MyDrive/UberData/bus_stops.csv"]
+transport_locations = data["/content/drive/MyDrive/UberData/transports.csv"]
+
+geometry = [Point(xy) for xy in zip(bus_stop_locations['Longitude'], bus_stop_locations['Latitude'])]
+
+gdf = GeoDataFrame(bus_stop_locations, geometry=geometry)   
+
+world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+gdf.plot(ax=world.plot(figsize=(10, 6)), marker='o', color='red', markersize=15)
+
+color_point_maps = {
+    "Underground" : "#967D69",
+    "Tram" : "#92B9BD",
+    "Railway (FGC)" : "#A8D4AD",
+    "RENFE" : "#F2F79E",
+    "Maritime station" : "#E8EC67",
+    "Airport train" : "#D6D6B1",
+    "Funiculur" : "#878472",
+    "Cableway" : "#De541E",
+}
+
+barcelona_map = folium.Map([41.3947,2.1557], zoom_start=12.4, tiles='cartodbpositron')
+
+def plotDot(lat_pt, long_pt, color):
+    '''input: series that contains a numeric named latitude and a numeric named longitude
+    this function creates a CircleMarker and adds it to your this_map'''
+    folium.CircleMarker(location=[long_pt, lat_pt],
+                        radius=2,
+                        color=color,
+                        weight=5).add_to(barcelona_map)
+
+specific_loc_data = transport_locations[transport_locations["District.Name"]=="Eixample"]
+
+for transport_type in color_point_maps.keys():
+    
+    transport_df = transport_locations[transport_locations["Transport"]==transport_type]
+    for long_pt, lat_pt in transport_df[["Longitude", "Latitude"]].values:
+        plotDot(long_pt, lat_pt, color_point_maps[transport_type])
