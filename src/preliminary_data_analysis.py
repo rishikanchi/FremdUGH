@@ -44,3 +44,21 @@ total = 0
 for value in month_total:
     if not math.isnan(value):
         total += value
+
+df = pd.DataFrame({"District Name" : pop_sum2.keys(), 
+                   "Percentage Employed" : [x for i, x in enumerate(month_perc) if i != 5], 
+                   "Population Size" : pop_sum2.values, 
+                   "Total Employed" : [x for i, x in enumerate(month_total) if i != 5]})
+
+def get_num_traveled(district_name):
+    immigrants_moved_from = destination_data2[destination_data2["from"] == district_name]["weight"].sum()
+    immigrants_moved_to = destination_data2[destination_data2["to"] == district_name]["weight"].sum()
+
+    return immigrants_moved_from + immigrants_moved_to
+
+df["Number Traveled"] = df["District Name"].apply(get_num_traveled)
+df["Population Weightage"] = df["Population Size"] = df["Population Size"] / df["Population Size"].max()
+df["Travel Relative To Employment and Population"] = df["Number Traveled"] / df["Total Employed"] * 100 * df["Population Weightage"]
+
+fig, ax = pyplot.subplots(figsize=(15, 5))
+sns.barplot(y=df["Travel Relative To Employment and Population"], x=df["District Name"])
